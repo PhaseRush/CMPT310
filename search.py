@@ -18,6 +18,11 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from game import Directions
+from typing import Set, Tuple
+from util import Stack as ShittyStack
+from util import Queue as QuirkyQueue
+
 
 class SearchProblem:
     """
@@ -67,10 +72,53 @@ def tinyMazeSearch(problem):
     Returns a sequence of moves that solves tinyMaze.  For any other maze, the
     sequence of moves will be incorrect, so only use this for tinyMaze.
     """
-    from game import Directions
+    # from game import Directions ### why in the FUCK is this imported in this scope??? Is direction only relevant in the tiny maze problem???
     s = Directions.SOUTH
     w = Directions.WEST
-    return  [s, s, w, s, w, w, s, w]
+    return [s, s, w, s, w, w, s, w]
+
+
+def reconstruct(start, goal, edges):
+    path = [goal]
+    while start != goal:
+        goal = edges[goal]
+        path.append(goal)
+    reversed_positions = list(reversed(path))
+    prev = reversed_positions[0]
+    dirs = []
+    for pos in reversed_positions[1:]:
+        if pos[0] > prev[0]:
+            dirs.append(Directions.EAST)
+        elif pos[0] < prev[0]:
+            dirs.append(Directions.WEST)
+        elif pos[1] > prev[1]:
+            dirs.append(Directions.NORTH)
+        elif pos[1] < prev[1]:
+            dirs.append(Directions.SOUTH)
+        else:
+            raise Exception("You done fucked up. Two consecutive positions are the same.")
+        prev = pos
+
+    return dirs
+
+
+def generic_search(problem, structure, heuristic):
+    s: structure = structure((problem.getStartState(), []))
+    visited: Set[Tuple[int, int]] = set()
+    edges = {}
+    while not s.isEmpty():
+        curr, path, cost = s.pop()
+        if problem.isGoalState(curr):
+            return reconstruct(problem.getStartState(), curr, edges)
+        for suck in problem.getSuccessors(curr):  # type(suck) = ((x, y), 'direction', int)
+            if suck[0] not in visited:
+                visited.add(suck[0])
+                s.push((suck[0], [suck[1]]))
+                edges[suck[0]] = curr
+
+    # no solution
+    return []
+
 
 def depthFirstSearch(problem):
     """
@@ -87,17 +135,22 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # -l mediumMaze -p SearchAgent --frameTime 0
+    return generic_search(problem, structure=ShittyStack, heuristic=None)
+
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # -l mediumMaze -p SearchAgent --frameTime 0 -a fn=bfs
+    return generic_search(problem, structure=QuirkyQueue, heuristic=None)
+
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
+
 
 def nullHeuristic(state, problem=None):
     """
@@ -105,6 +158,7 @@ def nullHeuristic(state, problem=None):
     goal in the provided SearchProblem.  This heuristic is trivial.
     """
     return 0
+
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
